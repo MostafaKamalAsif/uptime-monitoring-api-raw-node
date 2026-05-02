@@ -9,16 +9,24 @@ const app = {};
 
 // Testing file system
 // data.create('Test', 'Newfile', { name: 'Mostafa kamal', Age: '19' }, (err) => {
-//     log(`Error was ${err}`);
+//     log(`Error is ${err}`);
 // });
-// read file system
-data.read('Test', 'Newfile', (err, reasult) => {
-    log(err, reasult);
-});
+
 // updated file system
-data.update('Test', 'Newfile', { name: 'Omer faruk', Age: '23' }, (err) => {
-    log(`Error was ${err}`);
-});
+// data.update('Test', 'Newfile', { name: 'Mostafa kamal', Age: '23' }, (err) => {
+//     log(`Error is ${err}`);
+// });
+
+// read file system
+// data.read('Test', 'Newfile', (err, result) => {
+//     log(err, result);
+// });
+
+// Deleting file system
+// data.delete('Test', 'Newfile', (err) => {
+//     log(`Error is ${err}`);
+// });
+
 // create server
 app.CreateServer = () => {
     const server = http.createServer(app.handleReqRes);
