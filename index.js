@@ -3,7 +3,7 @@ const { log } = require('console');
 const http = require('http');
 const data = require('./lib/data');
 const { handleReqRes } = require('./helpers/handleReqRes');
-const envionment = require('./enviornment');
+const envionment = require('./helpers/environment');
 // app object-module scaffolding
 const app = {};
 
