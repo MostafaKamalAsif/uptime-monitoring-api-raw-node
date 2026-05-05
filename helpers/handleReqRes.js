@@ -4,7 +4,7 @@ const { StringDecoder } = require('string_decoder'); // convert Buffer → strin
 const url = require('url'); // parse URL
 const routes = require('../routes'); // import route handlers
 const { notFound } = require('../handlers/routehandler/notFound'); // fallback handler
-const {parseJSON} =require('./utilties')
+const { parseJSON } = require('./utilties');
 // ================= MODULE SCAFFOLDING =================
 const handle = {};
 
@@ -17,7 +17,7 @@ handle.handleReqRes = (req, res) => {
     const method = req.method.toLowerCase(); // get/post/put/delete
     const queryStringObject = parsedUrl.query; // query params object
     const { headers } = req; // request headers
-   
+
     // ---------- STORE REQUEST DATA ----------
     const requestProperties = {
         parsedUrl,
@@ -59,7 +59,7 @@ handle.handleReqRes = (req, res) => {
             const payloadString = JSON.stringify(payload); // convert to JSON
 
             // ---------- SEND RESPONSE ----------
-            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Content-Type', 'application/json');
             res.writeHead(statuscode);
             res.end(payloadString);
         });

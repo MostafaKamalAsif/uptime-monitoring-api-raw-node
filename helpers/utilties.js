@@ -17,13 +17,9 @@ utilites.parseJSON = (jsonString) => {
 // Hashing
 utilites.hash = (str) => {
     if (typeof str === 'string' && str.length > 0 && environment.secretKey) {
-        return crypto
-            .createHmac('sha256', environment.secretKey)
-            .update(str)
-            .digest('hex');
-    } else {
-        return false;
+        return crypto.createHmac('sha256', environment.secretKey).update(str).digest('hex');
     }
+    return false;
 };
 
 module.exports = utilites;
