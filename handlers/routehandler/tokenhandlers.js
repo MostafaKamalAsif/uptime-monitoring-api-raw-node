@@ -10,7 +10,21 @@ const handler = {};
 handler._token = {};
 
 // GET
-handler._token.get = (requestProperties, callback) => {};
+handler._token.get = (requestProperties, callback) => {
+    const id =
+        typeof requestProperties.queryStringObject.id === 'string' &&
+        requestProperties.queryStringObject.id.trim().length == 20
+            ? requestProperties.queryStringObject.id
+            : false;
+    data.read('tokens', id, (err, tData) => {
+        const tokenData = { ...parseJSON(tData) };
+        if (!err && tokenData) {
+            callback(200, tokenData);
+        } else {
+            callback(404, { error: 'Requested token not found' });
+        }
+    });
+};
 
 // POST
 handler._token.post = (requestProperties, callback) => {
@@ -32,11 +46,11 @@ handler._token.post = (requestProperties, callback) => {
                 hashPassword === parseJSON(userData).password
             ) {
                 const tokenId = createRandomString(20);
-                const expiere = Date.now() + 3 * 60 * 1000;
+                const expires = Date.now() + 3 * 60 * 1000;
                 const tokenObj = {
                     phone,
                     id: tokenId,
-                    expiere,
+                    expires,
                 };
                 data.create('tokens', tokenId, tokenObj, (err2) => {
                     if (!err2) {
@@ -53,10 +67,62 @@ handler._token.post = (requestProperties, callback) => {
 };
 
 // PUT
-handler._token.put = (requestProperties, callback) => {};
+handler._token.put = (requestProperties, callback) => {
+    const id =
+        typeof requestProperties.body.id === 'string' &&
+        requestProperties.body.id.trim().length == 20
+            ? requestProperties.body.id
+            : false;
+    const extend =
+        typeof requestProperties.body.extend === 'boolean' &&
+        requestProperties.body.extend === true;
+    data.read('tokens', id, (err1, tData) => {
+        const tokenObj = parseJSON(tData);
+        if (id && extend) {
+            if (tokenObj.id === id && !err1) {
+                if (tokenObj.expires > Date.now()) {
+                    tokenObj.expires = Date.now() + 3 * 60 * 1000;
+                    data.update('tokens', id, tokenObj, (err2) => {
+                        if (!err2) {
+                            callback(200, { success: 'Token extend successfuly.' });
+                        } else {
+                            callback(500, { error: 'Problen shown in server side!' });
+                        }
+                    });
+                } else {
+                    callback(404, { error: 'Requested token alrady expired!' });
+                }
+            } else {
+                callback(404, { error: 'Requested token not found' });
+            }
+        } else {
+            callback(404, { error: 'Invalid token id! ' });
+        }
+    });
+};
 
 // DELETE
-handler._token.delete = (requestProperties, callback) => {};
+handler._token.delete = (requestProperties, callback) => {
+    const id =
+        typeof requestProperties.queryStringObject.id === 'string' &&
+        requestProperties.queryStringObject.id.trim().length == 20
+            ? requestProperties.queryStringObject.id
+            : false;
+    data.read('tokens', id, (err, tData) => {
+        const tokenData = parseJSON(tData);
+        if (!err && tokenData) {
+            data.delete('tokens', id, (err2) => {
+                if (!err2) {
+                    callback(200, { success: 'Token deleted successfuly.' });
+                } else {
+                    callback(500, { error: 'There is an problem. Try again!' });
+                }
+            });
+        } else {
+            callback(404, { error: 'Requested token not found' });
+        }
+    });
+};
 
 // ================= MAIN USER HANDLER =================
 handler.tokenhandler = (requestProperties, callback) => {
