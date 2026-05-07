@@ -46,7 +46,7 @@ handler._token.post = (requestProperties, callback) => {
                 hashPassword === parseJSON(userData).password
             ) {
                 const tokenId = createRandomString(20);
-                const expires = Date.now() + 3 * 60 * 1000;
+                const expires = Date.now() + 60 * 60 * 1000;
                 const tokenObj = {
                     phone,
                     id: tokenId,
@@ -81,7 +81,7 @@ handler._token.put = (requestProperties, callback) => {
         if (id && extend) {
             if (tokenObj.id === id && !err1) {
                 if (tokenObj.expires > Date.now()) {
-                    tokenObj.expires = Date.now() + 3 * 60 * 1000;
+                    tokenObj.expires = Date.now() + 60 * 60 * 1000;
                     data.update('tokens', id, tokenObj, (err2) => {
                         if (!err2) {
                             callback(200, { success: 'Token extend successfuly.' });
@@ -124,6 +124,21 @@ handler._token.delete = (requestProperties, callback) => {
     });
 };
 
+handler._token.verify = (id, phone, callback) => {
+    data.read('tokens', id, (err, tokenDataRaw) => {
+        if (err || !tokenDataRaw) {
+            return callback(false);
+        }
+
+        const tokenData = parseJSON(tokenDataRaw);
+
+        if (tokenData.phone === phone && tokenData.expires > Date.now()) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    });
+};
 // ================= MAIN USER HANDLER =================
 handler.tokenhandler = (requestProperties, callback) => {
     const acceptedMethods = ['get', 'post', 'put', 'delete'];

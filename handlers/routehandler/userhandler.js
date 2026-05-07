@@ -2,6 +2,7 @@
 const data = require('../../lib/data');
 const { hash } = require('../../helpers/utilties');
 const { parseJSON } = require('../../helpers/utilties');
+const tokenhandler = require('./tokenhandlers');
 // MODULE SCAFFOLDING
 const handler = {};
 
@@ -15,15 +16,31 @@ handler._users.get = (requestProperties, callback) => {
         requestProperties.queryStringObject.phone.trim().length == 11
             ? requestProperties.queryStringObject.phone
             : false;
-    data.read('users', phone, (err, data) => {
-        const user = { ...parseJSON(data) };
-        if (!err && user) {
-            delete user.password;
-            callback(200, user);
-        } else {
-            callback(404, { error: 'Requested user not found' });
-        }
-    });
+    if (phone) {
+        //verify token
+        const token =
+            typeof requestProperties.headers.token === 'string'
+                ? requestProperties.headers.token
+                : false;
+        tokenhandler._token.verify(token, phone, (tokenId) => {
+            if (tokenId) {
+                //loolup the user
+                data.read('users', phone, (err, data) => {
+                    const user = { ...parseJSON(data) };
+                    if (!err && user) {
+                        delete user.password;
+                        callback(200, user);
+                    } else {
+                        callback(404, { error: 'Requested user not found' });
+                    }
+                });
+            } else {
+                callback(403, { error: 'Authentication failure' });
+            }
+        });
+    } else {
+        callback(400, { error: 'Invalid phone number!' });
+    }
 };
 
 // POST
@@ -54,7 +71,6 @@ handler._users.post = (requestProperties, callback) => {
             : false;
 
     if (firstName && lastName && phone && password && tosAgrement) {
-        // make sure that the user doesn't alrady exits
         data.read('users', phone, (err1) => {
             if (err1) {
                 const userObject = {
@@ -109,46 +125,59 @@ handler._users.put = (requestProperties, callback) => {
 
     if (phone) {
         if (firstName || lastName || password) {
-            data.read('users', phone, (err1, uData) => {
-                const userData = parseJSON(uData);
-                if (!err1 && userData) {
-                    // ← check if anything actually changed
-                    const isFirstNameSame = firstName && firstName === userData.firstName;
-                    const isLastNameSame = lastName && lastName === userData.lastName;
-                    const isPasswordSame = password && hash(password) === userData.password;
+            //verify token
+            const token =
+                typeof requestProperties.headers.token === 'string'
+                    ? requestProperties.headers.token
+                    : false;
+            tokenhandler._token.verify(token, phone, (tokenId) => {
+                if (tokenId) {
+                    //loolup the user
 
-                    const nothingChanged =
-                        (!firstName || isFirstNameSame) &&
-                        (!lastName || isLastNameSame) &&
-                        (!password || isPasswordSame);
+                    data.read('users', phone, (err1, uData) => {
+                        const userData = parseJSON(uData);
+                        if (!err1 && userData) {
+                            // ← check if anything actually changed
+                            const isFirstNameSame = firstName && firstName === userData.firstName;
+                            const isLastNameSame = lastName && lastName === userData.lastName;
+                            const isPasswordSame = password && hash(password) === userData.password;
 
-                    if (nothingChanged) {
-                        return callback(400, {
-                            error: 'Nothing to update, all values are the same',
-                        });
-                    }
+                            const nothingChanged =
+                                (!firstName || isFirstNameSame) &&
+                                (!lastName || isLastNameSame) &&
+                                (!password || isPasswordSame);
 
-                    if (firstName && !isFirstNameSame) {
-                        userData.firstName = firstName;
-                    }
-                    if (lastName && !isLastNameSame) {
-                        userData.lastName = lastName;
-                    }
-                    if (password && !isPasswordSame) {
-                        userData.password = hash(password);
-                    }
+                            if (nothingChanged) {
+                                return callback(400, {
+                                    error: 'Nothing to update, all values are the same',
+                                });
+                            }
 
-                    data.update('users', phone, userData, (err2) => {
-                        if (!err2) {
-                            callback(200, { success: 'User info updated successfuly.' });
-                        } else {
-                            callback(500, {
-                                error: 'User info not updated successfuly. Please try again!',
+                            if (firstName && !isFirstNameSame) {
+                                userData.firstName = firstName;
+                            }
+                            if (lastName && !isLastNameSame) {
+                                userData.lastName = lastName;
+                            }
+                            if (password && !isPasswordSame) {
+                                userData.password = hash(password);
+                            }
+
+                            data.update('users', phone, userData, (err2) => {
+                                if (!err2) {
+                                    callback(200, { success: 'User info updated successfuly.' });
+                                } else {
+                                    callback(500, {
+                                        error: 'User info not updated successfuly. Please try again!',
+                                    });
+                                }
                             });
+                        } else {
+                            callback(400, { error: 'User not found' });
                         }
                     });
                 } else {
-                    callback(400, { error: 'User not found' });
+                    callback(403, { error: 'Authentication failure' });
                 }
             });
         } else {
@@ -166,20 +195,36 @@ handler._users.delete = (requestProperties, callback) => {
         requestProperties.queryStringObject.phone.trim().length == 11
             ? requestProperties.queryStringObject.phone
             : false;
-    data.read('users', phone, (err, uData) => {
-        const user = parseJSON(uData);
-        if (!err && user) {
-            data.delete('users', phone, (err2) => {
-                if (!err2) {
-                    callback(200, { success: 'User deleted successfuly.' });
-                } else {
-                    callback(500, { error: 'There is an problem. Try again!' });
-                }
-            });
-        } else {
-            callback(404, { error: 'Requested user not found' });
-        }
-    });
+    if (phone) {
+        //verify token
+        const token =
+            typeof requestProperties.headers.token === 'string'
+                ? requestProperties.headers.token
+                : false;
+        tokenhandler._token.verify(token, phone, (tokenId) => {
+            if (tokenId) {
+                //loolup the user
+                data.read('users', phone, (err, uData) => {
+                    const user = parseJSON(uData);
+                    if (!err && user) {
+                        data.delete('users', phone, (err2) => {
+                            if (!err2) {
+                                callback(200, { success: 'User deleted successfuly.' });
+                            } else {
+                                callback(500, { error: 'There is an problem. Try again!' });
+                            }
+                        });
+                    } else {
+                        callback(404, { error: 'Requested user not found' });
+                    }
+                });
+            } else {
+                callback(403, { error: 'Authentication failure' });
+            }
+        });
+    } else {
+        callback(400, { error: 'Invalid phone number!' });
+    }
 };
 
 // ================= MAIN USER HANDLER =================
