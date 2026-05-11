@@ -7,6 +7,7 @@ environment.staging = {
     port: 3000, // app will run on port 3000 in development
     envName: 'staging', // name of the environment
     secretKey: 'aksdhfasdfgkasofhsdnglkasl',
+    maxChecks: 5,
 };
 
 // ================= PRODUCTION CONFIG =================
@@ -14,6 +15,7 @@ environment.production = {
     port: 5000, // app will run on port 5000 in production
     envName: 'production', // name of the environment
     secretKey: 'adas9e4fdosw0jsaf',
+    maxChecks: 5,
 };
 
 // ================= DETECT CURRENT ENVIRONMENT =================
