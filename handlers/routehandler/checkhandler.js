@@ -10,40 +10,6 @@ const handler = {};
 // ================= USERS SUB HANDLERS =================
 handler._check = {};
 
-// GET
-handler._check.get = (requestProperties, callback) => {
-    const phone =
-        typeof requestProperties.queryStringObject.phone === 'string' &&
-        requestProperties.queryStringObject.phone.trim().length == 11
-            ? requestProperties.queryStringObject.phone
-            : false;
-    if (phone) {
-        //verify token
-        const token =
-            typeof requestProperties.headers.token === 'string'
-                ? requestProperties.headers.token
-                : false;
-        tokenhandler._token.verify(token, phone, (tokenId) => {
-            if (tokenId) {
-                //loolup the user
-                data.read('users', phone, (err, data) => {
-                    const user = { ...parseJSON(data) };
-                    if (!err && user) {
-                        delete user.password;
-                        callback(200, user);
-                    } else {
-                        callback(404, { error: 'Requested user not found' });
-                    }
-                });
-            } else {
-                callback(403, { error: 'Authentication failure' });
-            }
-        });
-    } else {
-        callback(400, { error: 'Invalid phone number!' });
-    }
-};
-
 // POST
 handler._check.post = (requestProperties, callback) => {
     const protocol =
@@ -79,10 +45,16 @@ handler._check.post = (requestProperties, callback) => {
             typeof requestProperties.headers.token === 'string'
                 ? requestProperties.headers.token
                 : false;
+        console.log('token:', token);
         data.read('tokens', token, (err1, tokenData) => {
+            console.log('err1:', err1); // ← add this
+            console.log('tokenData:', tokenData);
             if (!err1 && tokenData) {
                 const userPhone = parseJSON(tokenData).phone;
+                console.log('userPhone:', userPhone);
                 data.read('users', userPhone, (err2, userData) => {
+                    console.log('err2:', err2); // ← add this
+                    console.log('userData:', userData);
                     if (!err2 && userData) {
                         tokenhandler._token.verify(token, userPhone, (tokenIsValid) => {
                             if (tokenIsValid) {
@@ -108,12 +80,17 @@ handler._check.post = (requestProperties, callback) => {
                                     data.create('check', checkID, checksObj, (err3) => {
                                         if (!err3) {
                                             //add check id to user's object
+                                            userChecks.push(checkID);
                                             userObj.check = userChecks;
-                                            userChecks.check.push(checkID);
                                             //update user's folder
-                                            data.update('users', userPhone, (err4) => {
+                                            data.update('users', userPhone, userObj, (err4) => {
                                                 if (!err4) {
-                                                    callback(200, userChecks);
+                                                    callback(200, {
+                                                        message: 'Check created successfully',
+                                                        check: checksObj,
+                                                        totalChecks: userObj.check.length,
+                                                        allCheckIds: userObj.check,
+                                                    });
                                                 } else {
                                                     callback(500, {
                                                         error: 'There is a problem in server side in update user',
@@ -145,133 +122,6 @@ handler._check.post = (requestProperties, callback) => {
         callback(400, {
             error: 'You have a problem in request',
         });
-    }
-};
-
-// PUT
-handler._check.put = (requestProperties, callback) => {
-    const phone =
-        typeof requestProperties.body.phone === 'string' &&
-        requestProperties.body.phone.trim().length == 11
-            ? requestProperties.body.phone
-            : false;
-    const firstName =
-        typeof requestProperties.body.firstName === 'string' &&
-        requestProperties.body.firstName.trim().length > 0
-            ? requestProperties.body.firstName
-            : false;
-    const lastName =
-        typeof requestProperties.body.lastName === 'string' &&
-        requestProperties.body.lastName.trim().length > 0
-            ? requestProperties.body.lastName
-            : false;
-    const password =
-        typeof requestProperties.body.password === 'string' &&
-        requestProperties.body.password.trim().length > 0
-            ? requestProperties.body.password
-            : false;
-
-    if (phone) {
-        if (firstName || lastName || password) {
-            //verify token
-            const token =
-                typeof requestProperties.headers.token === 'string'
-                    ? requestProperties.headers.token
-                    : false;
-            tokenhandler._token.verify(token, phone, (tokenId) => {
-                if (tokenId) {
-                    //loolup the user
-
-                    data.read('users', phone, (err1, uData) => {
-                        const userData = parseJSON(uData);
-                        if (!err1 && userData) {
-                            // ← check if anything actually changed
-                            const isFirstNameSame = firstName && firstName === userData.firstName;
-                            const isLastNameSame = lastName && lastName === userData.lastName;
-                            const isPasswordSame = password && hash(password) === userData.password;
-
-                            const nothingChanged =
-                                (!firstName || isFirstNameSame) &&
-                                (!lastName || isLastNameSame) &&
-                                (!password || isPasswordSame);
-
-                            if (nothingChanged) {
-                                return callback(400, {
-                                    error: 'Nothing to update, all values are the same',
-                                });
-                            }
-
-                            if (firstName && !isFirstNameSame) {
-                                userData.firstName = firstName;
-                            }
-                            if (lastName && !isLastNameSame) {
-                                userData.lastName = lastName;
-                            }
-                            if (password && !isPasswordSame) {
-                                userData.password = hash(password);
-                            }
-
-                            data.update('users', phone, userData, (err2) => {
-                                if (!err2) {
-                                    callback(200, { success: 'User info updated successfuly.' });
-                                } else {
-                                    callback(500, {
-                                        error: 'User info not updated successfuly. Please try again!',
-                                    });
-                                }
-                            });
-                        } else {
-                            callback(400, { error: 'User not found' });
-                        }
-                    });
-                } else {
-                    callback(403, { error: 'Authentication failure' });
-                }
-            });
-        } else {
-            callback(400, { error: 'Nothing to update' });
-        }
-    } else {
-        callback(400, { error: 'Phone number is invalid. Please try again !' });
-    }
-};
-
-// DELETE
-handler._check.delete = (requestProperties, callback) => {
-    const phone =
-        typeof requestProperties.queryStringObject.phone === 'string' &&
-        requestProperties.queryStringObject.phone.trim().length == 11
-            ? requestProperties.queryStringObject.phone
-            : false;
-    if (phone) {
-        //verify token
-        const token =
-            typeof requestProperties.headers.token === 'string'
-                ? requestProperties.headers.token
-                : false;
-        tokenhandler._token.verify(token, phone, (tokenId) => {
-            if (tokenId) {
-                //loolup the user
-                data.read('users', phone, (err, uData) => {
-                    const user = parseJSON(uData);
-                    if (!err && user) {
-                        data.delete('users', phone, (err2) => {
-                            if (!err2) {
-                                callback(200, { success: 'User deleted successfuly.' });
-                            } else {
-                                callback(500, { error: 'There is an problem. Try again!' });
-                            }
-                        });
-                    } else {
-                        callback(404, { error: 'Requested user not found' });
-                    }
-                });
-            } else {
-                callback(403, { error: 'Authentication failure' });
-            }
-        });
-    } else {
-        callback(400, { error: 'Invalid phone number!' });
     }
 };
 
