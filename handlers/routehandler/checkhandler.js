@@ -1,9 +1,9 @@
 // depandancies
 const data = require('../../lib/data');
-const { hash } = require('../../helpers/utilties');
+const { hash, createRandomString } = require('../../helpers/utilties');
 const { parseJSON } = require('../../helpers/utilties');
 const tokenhandler = require('./tokenhandlers');
-const maxChecks= require('../../helpers/environment')
+
 // MODULE SCAFFOLDING
 const handler = {};
 
@@ -82,7 +82,7 @@ handler._check.post = (requestProperties, callback) => {
         data.read('tokens', token, (err1, tokenData) => {
             if (!err1 && tokenData) {
                 const userPhone = parseJSON(tokenData).phone;
-                data.read('users', 'userPhone', (err2, userData) => {
+                data.read('users', userPhone, (err2, userData) => {
                     if (!err2 && userData) {
                         tokenhandler._token.verify(token, userPhone, (tokenIsValid) => {
                             if (tokenIsValid) {
@@ -93,11 +93,42 @@ handler._check.post = (requestProperties, callback) => {
                                         ? userObj.check
                                         : [];
 
-                                        if(userChecks.length <= maxChecks ){
-
-                                        }else{
-                                            
+                                if (userChecks.length <= 5) {
+                                    const checkID = createRandomString(20);
+                                    const checksObj = {
+                                        id: checkID,
+                                        userPhone: userPhone,
+                                        protocol: protocol,
+                                        url: url,
+                                        method: method,
+                                        successCode: successCode,
+                                        timeoutSecond: timeoutSecond,
+                                    };
+                                    // save the object in checks folder
+                                    data.create('check', checkID, checksObj, (err3) => {
+                                        if (!err3) {
+                                            //add check id to user's object
+                                            userObj.check = userChecks;
+                                            userChecks.check.push(checkID);
+                                            //update user's folder
+                                            data.update('users', userPhone, (err4) => {
+                                                if (!err4) {
+                                                    callback(200, userChecks);
+                                                } else {
+                                                    callback(500, {
+                                                        error: 'There is a problem in server side in update user',
+                                                    });
+                                                }
+                                            });
+                                        } else {
+                                            callback(500, {
+                                                error: 'There is a problem in server side in create checks',
+                                            });
                                         }
+                                    });
+                                } else {
+                                    callback(500, { error: 'server side problem' });
+                                }
                             } else {
                                 callback(403, { error: 'Authentication failure' });
                             }
