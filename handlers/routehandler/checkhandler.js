@@ -125,6 +125,73 @@ handler._check.post = (requestProperties, callback) => {
     }
 };
 
+//GET
+handler._check.get = (requestProperties, callback) => {
+    const id =
+        typeof requestProperties.queryStringObject.id === 'string' &&
+        requestProperties.queryStringObject.id.trim().length == 20
+            ? requestProperties.queryStringObject.id
+            : false;
+    if (id) {
+        //verify token
+        const token =
+            typeof requestProperties.headers.token === 'string'
+                ? requestProperties.headers.token
+                : false;
+        data.read('check', id, (err, checkData) => {
+            if (!err && checkData) {
+                tokenhandler._token.verify(token, parseJSON(checkData).userPhone, (isValid) => {
+                    if (isValid) {
+                        callback(200, parseJSON(checkData));
+                    } else {
+                        callback(403, { error: 'Authentication failure' });
+                    }
+                });
+            } else {
+                callback(403, { error: 'User is not found' });
+            }
+        });
+    } else {
+        callback(400, { error: 'Invalid ID!' });
+    }
+};
+
+//DELETE
+handler._check.delete = (requestProperties, callback) => {
+    const id =
+        typeof requestProperties.queryStringObject.id === 'string' &&
+        requestProperties.queryStringObject.id.trim().length == 20
+            ? requestProperties.queryStringObject.id
+            : false;
+    if (id) {
+        //verify token
+        const token =
+            typeof requestProperties.headers.token === 'string'
+                ? requestProperties.headers.token
+                : false;
+        data.read('check', id, (err, checkData) => {
+            if (!err && checkData) {
+                tokenhandler._token.verify(token, parseJSON(checkData).userPhone, (isValid) => {
+                    if (isValid) {
+                        data.delete('check', id, (err2) => {
+                            if (!err2) {
+                                callback(200, { success: 'Check deleted successfuly.' });
+                            } else {
+                                callback(500, { error: 'There is an problem. Try again!' });
+                            }
+                        });
+                    } else {
+                        callback(403, { error: 'Authentication failure' });
+                    }
+                });
+            } else {
+                callback(404, { error: 'There is a problem in server side' });
+            }
+        });
+    } else {
+        callback(400, { error: 'Invalid ID!' });
+    }
+};
 // ================= MAIN USER HANDLER =================
 handler.checkhandler = (requestProperties, callback) => {
     const acceptedMethods = ['get', 'post', 'put', 'delete'];
